@@ -1,0 +1,10 @@
+astral_points = 30
+
+skill = 321
+magical_attack = 321
+magic_power = 273
+mastery = 357
+magic_critical_hit = 211
+critical_hit_damage_percent = 60
+perception = 157
+haste = 207
