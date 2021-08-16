@@ -8,3 +8,6 @@ How to use the script :
 How to package :
 - pip install pyinstaller
 - pyinstaller --onefile astral_simulator.py
+
+Convert a list of svg to a gif :
+-  magick.exe -delay 20 -loop 0 *.svg myimage.gif

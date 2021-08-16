@@ -1,6 +1,11 @@
 import copy
 import math
 import os
+import time
+import cProfile
+
+from pycallgraph import PyCallGraph, Config, GlobbingFilter
+from pycallgraph.output import GraphvizOutput
 import sys
 
 # skill : +20
@@ -29,6 +34,53 @@ class Stats:
     magical_attack_skill = 0
     magical_power_skill = 0
     magical_critical_hit_skill = 0
+
+    def __copy__(self):
+        stats = Stats()
+        stats.magical_attack_skill = self.magical_attack_skill
+        stats.magical_power_skill = self.magical_power_skill
+        stats.magical_critical_hit_skill = self.magical_critical_hit_skill
+        stats.hp = self.hp
+        stats.mastery = self.mastery
+        stats.magic_power = self.magic_power
+        stats.haste = self.haste
+        stats.magic_critical_hit = self.magic_critical_hit
+        stats.skill = self.skill
+        stats.perception = self.perception
+        stats.magical_attack = self.magical_attack
+        stats.physical_defence = self.physical_defence
+        stats.magical_defence = self.magical_defence
+        stats.five_percent_twelve_meter = self.five_percent_twelve_meter
+        stats.critical_damage_three_percent = self.critical_damage_three_percent
+        stats.perception_one_percent = self.perception_one_percent
+        stats.haste_eight_percent = self.haste_eight_percent
+        stats.critical_hit_damage_percent = self.critical_hit_damage_percent
+
+        return stats
+
+    def __deepcopy__(self, memodict={}):
+        # no need to deepcopy, we only use integers
+        stats = Stats()
+        stats.magical_attack_skill = self.magical_attack_skill
+        stats.magical_power_skill = self.magical_power_skill
+        stats.magical_critical_hit_skill = self.magical_critical_hit_skill
+        stats.hp = self.hp
+        stats.mastery = self.mastery
+        stats.magic_power = self.magic_power
+        stats.haste = self.haste
+        stats.magic_critical_hit = self.magic_critical_hit
+        stats.skill = self.skill
+        stats.perception = self.perception
+        stats.magical_attack = self.magical_attack
+        stats.physical_defence = self.physical_defence
+        stats.magical_defence = self.magical_defence
+        stats.five_percent_twelve_meter = self.five_percent_twelve_meter
+        stats.critical_damage_three_percent = self.critical_damage_three_percent
+        stats.perception_one_percent = self.perception_one_percent
+        stats.haste_eight_percent = self.haste_eight_percent
+        stats.critical_hit_damage_percent = self.critical_hit_damage_percent
+
+        return stats
 
     def haste_percent(self):
         return self.haste * (1 + self.haste_eight_percent * 0.08) / 13.5 + 8
@@ -533,30 +585,6 @@ def node_8_2_3_2_2_2_4_2_10(stats: Stats):
     return stats
 
 
-
-
-# def node_(stats: Stats):
-#     stats.haste += 13
-
-def test_opti(current_stats: Stats, tree, profondeur, max):
-    print()
-    print("node : " + str(tree[0]))
-
-    profondeur += 1
-    print("profondeur : " + str(profondeur))
-
-    if profondeur > max:
-        return
-
-    tree[0](current_stats)
-
-    print(calculate_dps(current_stats))
-
-    print("nodes : " + str(len(tree[1])))
-    for node in tree[1]:
-        test_opti(copy.deepcopy(current_stats), node, profondeur, max)
-
-
 final_trees = []
 final_trees_signatures = []
 all_signatures = set()
@@ -564,23 +592,22 @@ global_steps = 0
 
 
 def signature(visited_nodes):
-    return ' '.join(set(visited_nodes))
+    return ' '.join(sorted(visited_nodes))
 
 
 def test_opti_2(current_stats: Stats, tree, profondeur, max, heads, visited):
 
     # heads représente les noeuds possibles
 
+    global global_steps
+    global_steps += 1
+
     if len(heads) == 0:
         # on a tout visité
         print("Tout visité")
-        visited = copy.deepcopy(visited)
+        visited = copy.copy(visited)
         current_stats = copy.deepcopy(current_stats)
-        # print()
-        # print(profondeur)
-        # print(', '.join(visited))
         dps = calculate_dps(current_stats)
-        # print(dps)
         print(len(visited))
         signa = signature(visited)
 
@@ -594,8 +621,10 @@ def test_opti_2(current_stats: Stats, tree, profondeur, max, heads, visited):
     for head in heads:
         if head not in tree:
             # bout atteint, on va voir ailleurs
+            print("Error : should not happen (all nodes have a child)")
             pass
         else:
+            # print(visited, signature(visited))
             for head in heads:
                 head_name = '_'.join(head.__name__.split("_")[1:])
                 # print()
@@ -614,8 +643,7 @@ def test_opti_2(current_stats: Stats, tree, profondeur, max, heads, visited):
                 # Si on a encore des points à dépenser
                 # print(visited, max, head_name, len(visited) + cost, calculate_dps(new_stats))
                 if len(visited) + cost <= max:
-                    new_stats = copy.deepcopy(current_stats)
-                    head(new_stats)
+                    new_stats = head(copy.deepcopy(current_stats))
 
                     new_heads = copy.copy(heads)
 
@@ -623,28 +651,21 @@ def test_opti_2(current_stats: Stats, tree, profondeur, max, heads, visited):
                         new_heads.extend(tree[head])
                     new_heads.remove(head)
 
-                    new_visited = copy.deepcopy(visited)
+                    new_visited = copy.copy(visited)
                     new_visited.append(head_name)
                     new_visited.extend('' for _ in range(cost))
                     if signature(new_visited) not in all_signatures:
                         # certains chemins peuvent être équivalents (ordre de parcours)
-                        global global_steps
-                        global_steps += 1
 
                         all_signatures.add(signature(new_visited))
                         test_opti_2(copy.deepcopy(new_stats), tree, profondeur + 1, max, new_heads, new_visited)
                 else:
                     current_stats = copy.deepcopy(current_stats)
-                    # print()
-                    # print(profondeur)
-                    # print(', '.join(visited))
                     dps = calculate_dps(current_stats)
-                    # print(dps)
-                    # print(len(visited))
                     signa = signature(visited)
 
                     if signa not in final_trees_signatures:
-                        final_trees.append((visited, dps, copy.deepcopy(current_stats)))
+                        final_trees.append((visited, dps, current_stats))
                         final_trees_signatures.append(signa)
 
 
@@ -652,37 +673,27 @@ def do_nothing(x):
     pass
 
 temps = 300
+attack_numbers_cache = {}
+attack_numbers_total_calls = 0
+attack_numbers_cached_calls = 0
 
+brd_ds_nm_numbers_cache = {}
+brd_ds_nm_numbers_total_calls = 0
+brd_ds_nm_numbers_cached_calls = 0
 
-def calculate_dps(stats: Stats, print = lambda x: None):
-    magical_attack = stats.magical_attack + stats.magical_attack_skill
-    magic_power = stats.magic_power + stats.magical_power_skill
+calculate_aw_fs_atc_ts_emh_damage_numbers_cache = {}
+calculate_aw_fs_atc_ts_emh_damage_total_calls = 0
+calculate_aw_fs_atc_ts_emh_damage_cached_calls = 0
 
-    m_total_attack = magical_attack * (magic_power / 13 / 100 + 1)
-    mastery_increase = stats.mastery / 9.3 / 100 + 1
-    emh_total = magical_attack * (magic_power / 13 / 100 + 1.2)
-    perception_percent = stats.perception_percent() #(stats.perception / 16.5 + 80) + stats.perception_one_percent
-    haste_percent = stats.haste_percent() #stats.haste * (1 + stats.haste_eight_percent * 0.08) / 13.5 + 8
-    critical_percent = stats.critical_percent() #stats.magic_critical_hit * 0.0643 - 0.0171
-    damage_with_percent_pur = 1 + stats.five_percent_twelve_meter * 0.05
-    crit_damage = stats.critical_hit_damage_percent + stats.critical_damage_three_percent * 3
+calculate_total_damage_numbers_cache = {}
+calculate_total_damage_numbers_total_calls = 0
+calculate_total_damage_numbers_cached_calls = 0
 
-    print("damage_with_percent_pur : " + str(damage_with_percent_pur))
-    print("crit_damage : " + str(crit_damage))
+dps_cache = {}
+dps_total_calls = 0
+dps_cached_calls = 0
 
-    print("emh_total : " + str(emh_total))
-    print("m_total_attack : " + str(m_total_attack))
-    print("mastery_increase : " + str(mastery_increase))
-
-    print("")
-
-    print("Perception : " + str(perception_percent))
-    print("Haste : " + str(haste_percent))
-    print("Critical % : " + str(critical_percent))
-
-    print("")
-
-    # Sheet report
+def calculate_freq(haste_percent, critical_percent):
     M4 = 2 # manual alignment
     N3 = haste_percent
     N12 = N3/100 + 1
@@ -821,6 +832,173 @@ def calculate_dps(stats: Stats, print = lambda x: None):
     emh_nb = [J10+L10]
     nm_nb = [Rotation_C15, Rotation_D15, I11 + K11, max(K12, 0), Rotation_H15, Rotation_I15, J11 + L11, L12]
 
+    return [aw_nb, brd_nb, ds_nb, fs_nb, atc_nb, ts_nb, emh_nb, nm_nb]
+
+
+def print_global(param):
+    print(param)
+
+
+def calculate_brd_ds_nm(m_total_attack, mastery_increase, damage_with_percent_pur, emh_total, brd_nb, ds_nb, nm_nb):
+    brd_damage = ((58 + m_total_attack * 1.99 * mastery_increase * 1.2) * 1 * damage_with_percent_pur * 1.25 * brd_nb[
+        0]) + \
+                 ((58 + m_total_attack * 1.99 * mastery_increase * 1.2) * (
+                         1 + 0.35) * damage_with_percent_pur * 1.25 * brd_nb[1]) + \
+                 ((58 + emh_total * 1.99 * mastery_increase * 1.2) * 1 * damage_with_percent_pur * 1.25 * brd_nb[2]) + \
+                 ((58 + emh_total * 1.99 * mastery_increase * 1.2) * (1 + 0.35) * damage_with_percent_pur * 1.25 *
+                  brd_nb[3])
+
+    dragonsong_damage = ((122 + m_total_attack * 4.2 * mastery_increase) * (0.35 + 1) * damage_with_percent_pur * ds_nb[
+        0]) + \
+                        ((122 + emh_total * 4.2 * mastery_increase) * (0.35 + 1) * damage_with_percent_pur * ds_nb[1])
+
+    nm_ice = ((115 + m_total_attack * 8.57 * mastery_increase) * 1 * damage_with_percent_pur * nm_nb[0]) + \
+             ((115 + m_total_attack * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * nm_nb[1]) + \
+             ((115 + m_total_attack * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * 1.6 * nm_nb[
+                 2]) + \
+             ((115 + m_total_attack * 8.57 * mastery_increase) * (
+                     1 + 0.35) * damage_with_percent_pur * 1.65 * 1.3 * nm_nb[3]) + \
+             ((115 + emh_total * 8.57 * mastery_increase) * 1 * damage_with_percent_pur * nm_nb[4]) + \
+             ((115 + emh_total * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * nm_nb[5]) + \
+             ((115 + emh_total * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * 1.6 * nm_nb[6]) + \
+             ((115 + emh_total * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * 1.65 * 1.3 * nm_nb[
+                 7])
+    return [brd_damage, dragonsong_damage, nm_ice]
+
+
+def calculate_aw_fs_atc_ts_emh_damage(m_total_attack, damage_with_percent_pur, aw_nb, emh_total, fs_nb, atc_nb, ts_nb, emh_nb, print):
+    aw_damage = (((6 + m_total_attack * 0.21277) * 2) + (
+            6 + m_total_attack * 0.273)) * 1 * damage_with_percent_pur * aw_nb[0] + (((6 + emh_total * 0.21277) * 2) + (
+            6 + emh_total * 0.273)) * 1 * damage_with_percent_pur * aw_nb[1]
+    print("")
+    print("AW : " + str(aw_damage))
+
+    fs_damage = ((26 + m_total_attack * 0.75) * 1 * damage_with_percent_pur * fs_nb[0]) + (
+            (26 + emh_total * 0.75) * 1 * damage_with_percent_pur * fs_nb[1])
+    print("FS : " + str(fs_damage))
+
+    atc_damage = ((28 + m_total_attack * 1.25) * 1 * damage_with_percent_pur * atc_nb[0]) + \
+                 ((28 + emh_total * 1.25) * 1 * damage_with_percent_pur * atc_nb[1])
+    print("ATC : " + str(atc_damage))
+
+    thundering_sky_damage = ((2 + m_total_attack * 0.3773) * 5 * 1 * damage_with_percent_pur * ts_nb[0]) + \
+                            ((2 + emh_total * 0.3773) * 5 * 1 * damage_with_percent_pur * ts_nb[1])
+    print("Thundering sky : " + str(thundering_sky_damage))
+
+    emh_damage = ((15 + emh_total * 0.71) * 1 * damage_with_percent_pur * emh_nb[0])
+    print("EMH : " + str(emh_damage))
+    return [aw_damage, fs_damage, atc_damage, thundering_sky_damage, emh_damage]
+
+
+
+def calculate_total_damage(aw_damage, brd_damage, dragonsong_damage, fs_damage, atc_damage, thundering_sky_damage, emh_damage, perception_percent, nm_ice, crit_damage, critical_percent):
+    all_but_nm = aw_damage + brd_damage + dragonsong_damage + fs_damage + atc_damage + thundering_sky_damage + emh_damage
+    all = all_but_nm + nm_ice
+    total_damage = all_but_nm * (1 - perception_percent / 100) * 0.3 + \
+                   nm_ice * (1.1 - perception_percent / 100) * 0.3 + \
+                   all - (all_but_nm * (1 - perception_percent / 100) + nm_ice * (
+            1.1 - perception_percent / 100))
+
+    total_damage_with_crit = (((all_but_nm - brd_damage) - (all_but_nm - brd_damage) * (1 - perception_percent / 100)) * (crit_damage * ((critical_percent - (critical_percent*(1-perception_percent/100)))/100)/100 + 1)) +\
+                             (((all_but_nm - brd_damage)*(1-perception_percent/100)*0.3)) +\
+                             ((nm_ice - nm_ice * (0.9 - perception_percent/100))) * (crit_damage * ((critical_percent - (critical_percent*(1-perception_percent/100)))/100)/100 + 1) +\
+                             (nm_ice * (0.9 - perception_percent / 100) * 0.3) +\
+                             ((brd_damage - (brd_damage * (1 - perception_percent / 100) * 0.3)) * (crit_damage * ((critical_percent - (critical_percent*(1-perception_percent/100)))/100)/100 + 1)) +\
+                             (brd_damage * (1 - perception_percent/100) * 0.3)
+    return [total_damage, total_damage_with_crit]
+
+
+def calculate_dps(stats: Stats, print = lambda x: None):
+    global dps_total_calls
+    global dps_cached_calls
+
+
+    magical_attack = stats.magical_attack + stats.magical_attack_skill
+    magic_power = stats.magic_power + stats.magical_power_skill
+
+    m_total_attack = magical_attack * (magic_power / 13 / 100 + 1)
+    mastery_increase = stats.mastery / 9.3 / 100 + 1
+    emh_total = magical_attack * (magic_power / 13 / 100 + 1.2)
+    perception_percent = stats.perception_percent() #(stats.perception / 16.5 + 80) + stats.perception_one_percent
+    haste_percent = stats.haste_percent() #stats.haste * (1 + stats.haste_eight_percent * 0.08) / 13.5 + 8
+    critical_percent = stats.critical_percent() #stats.magic_critical_hit * 0.0643 - 0.0171
+    damage_with_percent_pur = 1 + stats.five_percent_twelve_meter * 0.05
+    crit_damage = stats.critical_hit_damage_percent + stats.critical_damage_three_percent * 3
+
+
+    dps_key = tuple([magical_attack, magic_power, m_total_attack, mastery_increase, emh_total, perception_percent, haste_percent, critical_percent, damage_with_percent_pur, crit_damage])
+    if dps_key in dps_cache:
+        dps_cached_calls += 1
+        return dps_cache[dps_key]
+
+    dps_total_calls += 1
+
+    print("damage_with_percent_pur : " + str(damage_with_percent_pur))
+    print("crit_damage : " + str(crit_damage))
+
+    print("emh_total : " + str(emh_total))
+    print("m_total_attack : " + str(m_total_attack))
+    print("mastery_increase : " + str(mastery_increase))
+
+    print("")
+
+    print("Perception : " + str(perception_percent))
+    print("Haste : " + str(haste_percent))
+    print("Critical % : " + str(critical_percent))
+
+    print("")
+
+    global attack_numbers_total_calls
+    global attack_numbers_cached_calls
+    global brd_ds_nm_numbers_total_calls
+    global brd_ds_nm_numbers_cached_calls
+    global calculate_aw_fs_atc_ts_emh_damage_total_calls
+    global calculate_aw_fs_atc_ts_emh_damage_cached_calls
+    global calculate_total_damage_numbers_total_calls
+    global calculate_total_damage_numbers_cached_calls
+
+    # Sheet report
+    # key = str(haste_percent) + ' ' + str(critical_percent)
+    key = tuple([str(haste_percent), str(critical_percent)])
+    if not key in attack_numbers_cache:
+        attack_numbers_total_calls += 1
+        attack_numbers_cache[key] = calculate_freq(haste_percent, critical_percent)
+    else:
+        attack_numbers_cached_calls += 1
+    [aw_nb, brd_nb, ds_nb, fs_nb, atc_nb, ts_nb, emh_nb, nm_nb] = attack_numbers_cache[key]
+
+    # key = ' '.join(map(lambda x:str(x), [m_total_attack, mastery_increase, damage_with_percent_pur, emh_total, brd_nb, ds_nb, nm_nb]))
+    key = tuple([m_total_attack, mastery_increase, damage_with_percent_pur, emh_total, tuple(brd_nb), tuple(ds_nb), tuple(nm_nb)])
+    if not key in brd_ds_nm_numbers_cache:
+        brd_ds_nm_numbers_total_calls += 1
+        brd_ds_nm_numbers_cache[key] = calculate_brd_ds_nm(m_total_attack, mastery_increase, damage_with_percent_pur, emh_total, brd_nb, ds_nb, nm_nb)
+    else:
+        brd_ds_nm_numbers_cached_calls += 1
+    [brd_damage, dragonsong_damage, nm_ice] = brd_ds_nm_numbers_cache[key]
+
+    print("BRD : " + str(brd_damage))
+    print("Dragonsong : " + str(dragonsong_damage))
+    print("NM Icy Melody : " + str(nm_ice))
+
+    # key = ' '.join(map(lambda x:str(x), [m_total_attack, damage_with_percent_pur, aw_nb, emh_total, fs_nb, atc_nb, ts_nb, emh_nb]))
+    key = tuple([m_total_attack, damage_with_percent_pur, tuple(aw_nb), emh_total, tuple(fs_nb), tuple(atc_nb), tuple(ts_nb), tuple(emh_nb)])
+    if not key in calculate_aw_fs_atc_ts_emh_damage_numbers_cache:
+        calculate_aw_fs_atc_ts_emh_damage_total_calls += 1
+        calculate_aw_fs_atc_ts_emh_damage_numbers_cache[key] = calculate_aw_fs_atc_ts_emh_damage(m_total_attack, damage_with_percent_pur, aw_nb, emh_total, fs_nb, atc_nb, ts_nb, emh_nb, print)
+    else:
+        calculate_aw_fs_atc_ts_emh_damage_cached_calls += 1
+    [aw_damage, fs_damage, atc_damage, thundering_sky_damage, emh_damage] = calculate_aw_fs_atc_ts_emh_damage_numbers_cache[key]
+
+    # key = ' '.join(map(lambda x: str(x), [aw_damage, brd_damage, dragonsong_damage, fs_damage, atc_damage, thundering_sky_damage, emh_damage, perception_percent, nm_ice, crit_damage, critical_percent]))
+    key = tuple([aw_damage, brd_damage, dragonsong_damage, fs_damage, atc_damage, thundering_sky_damage, emh_damage, perception_percent, nm_ice, crit_damage, critical_percent])
+    if not key in calculate_total_damage_numbers_cache:
+        calculate_total_damage_numbers_total_calls += 1
+        calculate_total_damage_numbers_cache[key] = calculate_total_damage(aw_damage, brd_damage, dragonsong_damage, fs_damage, atc_damage, thundering_sky_damage, emh_damage, perception_percent, nm_ice, crit_damage, critical_percent)
+    else:
+        calculate_total_damage_numbers_cached_calls += 1
+    [total_damage, total_damage_with_crit] = calculate_total_damage_numbers_cache[key]
+
+
     print("old " + """aw_nb = [175, 56]
 brd_nb = [0, 79, 2, 62]
 ds_nb = [31, 21]
@@ -847,19 +1025,7 @@ nm_nb = [0, 0, 12.03, 3, 0, 0, 12, 3]""")
     print("")
     print("AW : " + str(aw_damage))
 
-    brd_damage = ((58 + m_total_attack * 1.99 * mastery_increase * 1.2) * 1 * damage_with_percent_pur * 1.25 * brd_nb[
-        0]) + \
-                 ((58 + m_total_attack * 1.99 * mastery_increase * 1.2) * (
-                         1 + 0.35) * damage_with_percent_pur * 1.25 * brd_nb[1]) + \
-                 ((58 + emh_total * 1.99 * mastery_increase * 1.2) * 1 * damage_with_percent_pur * 1.25 * brd_nb[2]) + \
-                 ((58 + emh_total * 1.99 * mastery_increase * 1.2) * (1 + 0.35) * damage_with_percent_pur * 1.25 *
-                  brd_nb[3])
-    print("BRD : " + str(brd_damage))
 
-    dragonsong_damage = ((122 + m_total_attack * 4.2 * mastery_increase) * (0.35 + 1) * damage_with_percent_pur * ds_nb[
-        0]) + \
-                        ((122 + emh_total * 4.2 * mastery_increase) * (0.35 + 1) * damage_with_percent_pur * ds_nb[1])
-    print("Dragonsong : " + str(dragonsong_damage))
 
     fs_damage = ((26 + m_total_attack * 0.75) * 1 * damage_with_percent_pur * fs_nb[0]) + (
             (26 + emh_total * 0.75) * 1 * damage_with_percent_pur * fs_nb[1])
@@ -876,18 +1042,7 @@ nm_nb = [0, 0, 12.03, 3, 0, 0, 12, 3]""")
     emh_damage = ((15 + emh_total * 0.71) * 1 * damage_with_percent_pur * emh_nb[0])
     print("EMH : " + str(emh_damage))
 
-    nm_ice = ((115 + m_total_attack * 8.57 * mastery_increase) * 1 * damage_with_percent_pur * nm_nb[0]) + \
-             ((115 + m_total_attack * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * nm_nb[1]) + \
-             ((115 + m_total_attack * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * 1.6 * nm_nb[
-                 2]) + \
-             ((115 + m_total_attack * 8.57 * mastery_increase) * (
-                     1 + 0.35) * damage_with_percent_pur * 1.65 * 1.3 * nm_nb[3]) + \
-             ((115 + emh_total * 8.57 * mastery_increase) * 1 * damage_with_percent_pur * nm_nb[4]) + \
-             ((115 + emh_total * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * nm_nb[5]) + \
-             ((115 + emh_total * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * 1.6 * nm_nb[6]) + \
-             ((115 + emh_total * 8.57 * mastery_increase) * (1 + 0.35) * damage_with_percent_pur * 1.65 * 1.3 * nm_nb[
-                 7])
-    print("NM Icy Melody : " + str(nm_ice))
+
 
     print("")
 
@@ -904,7 +1059,9 @@ nm_nb = [0, 0, 12.03, 3, 0, 0, 12, 3]""")
                              (nm_ice * (0.9 - perception_percent / 100) * 0.3) +\
                              ((brd_damage - (brd_damage * (1 - perception_percent / 100) * 0.3)) * (crit_damage * ((critical_percent - (critical_percent*(1-perception_percent/100)))/100)/100 + 1)) +\
                              (brd_damage * (1 - perception_percent/100) * 0.3)
-    return (total_damage, total_damage_with_crit)
+    dps_cache[dps_key] = (total_damage, total_damage_with_crit)
+
+    return dps_cache[dps_key]
 
 
 def generate_svg(nodes, coord_map, astral_tree, txt_map, stats, points, after_stats, temps):
@@ -956,7 +1113,7 @@ def generate_svg(nodes, coord_map, astral_tree, txt_map, stats, points, after_st
     return out
 
 
-if __name__ == '__main__':
+def main():
     l_stats = Stats()
 
     # Base stats 60 current
@@ -1131,13 +1288,25 @@ if __name__ == '__main__':
     print(l_stats)
     print()
 
+    # for maxp in range(0, 75):
     for maxp in range(maxp, maxp+1):
+        start = time.time()
+        global final_trees
+        global final_trees_signatures
+        global all_signatures
+        global global_steps
+
         final_trees = []
         final_trees_signatures = []
         all_signatures = set()
         global_steps = 0
 
         test_opti_2(copy.deepcopy(l_stats), astral_tree_bis, 0, maxp, [node_0], [])
+
+        print(global_steps, time.time() - start)
+
+
+        # return
 
         sort_order = {}
         for tree in final_trees:
@@ -1151,6 +1320,24 @@ if __name__ == '__main__':
         #     print(tree[1][1]/temps, tree[0])
 
         print_all = True
+
+        global attack_numbers_total_calls
+        global attack_numbers_cached_calls
+        global brd_ds_nm_numbers_total_calls
+        global brd_ds_nm_numbers_cached_calls
+        global calculate_aw_fs_atc_ts_emh_damage_total_calls
+        global calculate_aw_fs_atc_ts_emh_damage_cached_calls
+        global calculate_total_damage_numbers_total_calls
+        global calculate_total_damage_numbers_cached_calls
+        global dps_total_calls
+        global dps_cached_calls
+
+        print('attack_numbers', attack_numbers_total_calls, attack_numbers_cached_calls)
+        print('brd_ds_nm_numbers', brd_ds_nm_numbers_total_calls, brd_ds_nm_numbers_cached_calls)
+        print('aw_fs_atc_ts_emh_damage', calculate_aw_fs_atc_ts_emh_damage_total_calls, calculate_aw_fs_atc_ts_emh_damage_cached_calls)
+        print('total_damage_numbers', calculate_total_damage_numbers_total_calls, calculate_total_damage_numbers_cached_calls)
+        print('dps_calls', dps_total_calls, dps_cached_calls)
+
         if print_all:
             print()
             print(global_steps)
@@ -1178,12 +1365,13 @@ if __name__ == '__main__':
             svg = generate_svg(ordered_trees[0][0], coord_map, astral_tree_bis, txt_map, l_stats, maxp, ordered_trees[0][2], temps)
             print(svg)
 
-            out_file = 'astral_tree.svg'
+            out_file = str(maxp).zfill(2) + '_' + 'astral_tree.svg'
             with open(out_file, 'w') as f:
                 f.write(svg)
 
             webbrowser.open('file://' + os.path.realpath(out_file))
             print()
+            print("dps : " + str(damage_with_crit / temps))
             print("global_steps " + str(global_steps))
 
         else:
@@ -1193,3 +1381,7 @@ if __name__ == '__main__':
     for node in txt_map.keys():
         if node not in coord_map:
             print(node)
+
+
+if __name__ == '__main__':
+    main()

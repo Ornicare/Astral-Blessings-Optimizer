@@ -153,3 +153,4 @@ fabric.properties
 # custom
 astral_simulator.spec
 astral_tree.svg
+*.svg
