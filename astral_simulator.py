@@ -1365,12 +1365,13 @@ def main():
             svg = generate_svg(ordered_trees[0][0], coord_map, astral_tree_bis, txt_map, l_stats, maxp, ordered_trees[0][2], temps)
             print(svg)
 
-            out_file = 'astral_tree.svg'
-            with open(str(maxp).zfill(2) + '_' + out_file, 'w') as f:
+            out_file = str(maxp).zfill(2) + '_' + 'astral_tree.svg'
+            with open(out_file, 'w') as f:
                 f.write(svg)
 
-            # webbrowser.open('file://' + os.path.realpath(out_file))
+            webbrowser.open('file://' + os.path.realpath(out_file))
             print()
+            print("dps : " + str(damage_with_crit / temps))
             print("global_steps " + str(global_steps))
 
         else:
