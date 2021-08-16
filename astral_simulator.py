@@ -1288,8 +1288,8 @@ def main():
     print(l_stats)
     print()
 
-    for maxp in range(0, 75):
-    # for maxp in range(maxp, maxp+1):
+    # for maxp in range(0, 75):
+    for maxp in range(maxp, maxp+1):
         start = time.time()
         global final_trees
         global final_trees_signatures
@@ -1319,7 +1319,7 @@ def main():
         # for tree in ordered_trees:
         #     print(tree[1][1]/temps, tree[0])
 
-        print_all = False
+        print_all = True
 
         global attack_numbers_total_calls
         global attack_numbers_cached_calls
@@ -1366,10 +1366,9 @@ def main():
             print(svg)
 
             out_file = 'astral_tree.svg'
-            with open(out_file, 'w') as f:
+            with open(str(maxp).zfill(2) + '_' + out_file, 'w') as f:
                 f.write(svg)
 
-            # todo temp
             # webbrowser.open('file://' + os.path.realpath(out_file))
             print()
             print("global_steps " + str(global_steps))
@@ -1385,13 +1384,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # cProfile.run('main()')
-    # graphviz = GraphvizOutput()
-    # config = Config()
-    # config.trace_filter = GlobbingFilter(exclude=[
-    #     'pycallgraph.*',
-    # ])
-    # config.debug = True
-    # with PyCallGraph(output=graphviz, config=config):
-    #     main()
-
