@@ -2,17 +2,13 @@ import copy
 import math
 import os
 import time
-import cProfile
-
-from pycallgraph import PyCallGraph, Config, GlobbingFilter
-from pycallgraph.output import GraphvizOutput
 import sys
+import webbrowser
 
 # skill : +20
 # magick attack : 314 contre 324 => 2.5
 # magick power : 296 contre 302 => 1.5
 # crit hit : 260 contre 266 => 1.5
-import webbrowser
 
 
 class Stats:
@@ -586,13 +582,14 @@ def node_8_2_3_2_2_2_4_2_10(stats: Stats):
 
 
 final_trees = []
-final_trees_signatures = []
-all_signatures = set()
+final_trees_signatures = {}
+all_signatures = {}
 global_steps = 0
 
 
 def signature(visited_nodes):
-    return ' '.join(sorted(visited_nodes))
+    return tuple(sorted(visited_nodes))
+    # return ' '.join(sorted(visited_nodes))
 
 
 def test_opti_2(current_stats: Stats, tree, profondeur, max, heads, visited):
@@ -608,12 +605,12 @@ def test_opti_2(current_stats: Stats, tree, profondeur, max, heads, visited):
         visited = copy.copy(visited)
         current_stats = copy.deepcopy(current_stats)
         dps = calculate_dps(current_stats)
-        print(len(visited))
-        signa = signature(visited)
+        print(len(visited.keys()))
+        signa = signature(visited.keys())
 
         if signa not in final_trees_signatures:
-            final_trees.append((visited, dps, current_stats))
-            final_trees_signatures.append(signa)
+            final_trees.append((visited.keys(), dps, current_stats))
+            final_trees_signatures[signa] = True
 
     # print("heads : " + ', '.join([head.__name__ for head in heads]))
     # print(str(max) + " len(visitesqsqdqdsdsqd)" + str(len(visited)))
@@ -652,21 +649,22 @@ def test_opti_2(current_stats: Stats, tree, profondeur, max, heads, visited):
                     new_heads.remove(head)
 
                     new_visited = copy.copy(visited)
-                    new_visited.append(head_name)
-                    new_visited.extend('' for _ in range(cost))
-                    if signature(new_visited) not in all_signatures:
+                    new_visited[head_name] = True
+                    for i in range(cost):
+                        new_visited[head_name + '_' + str(i)] = True
+                    if signature(new_visited.keys()) not in all_signatures:
                         # certains chemins peuvent être équivalents (ordre de parcours)
 
-                        all_signatures.add(signature(new_visited))
+                        all_signatures[signature(new_visited.keys())] = True
                         test_opti_2(copy.deepcopy(new_stats), tree, profondeur + 1, max, new_heads, new_visited)
                 else:
                     current_stats = copy.deepcopy(current_stats)
                     dps = calculate_dps(current_stats)
-                    signa = signature(visited)
+                    signa = signature(visited.keys())
 
                     if signa not in final_trees_signatures:
-                        final_trees.append((visited, dps, current_stats))
-                        final_trees_signatures.append(signa)
+                        final_trees.append((visited.keys(), dps, current_stats))
+                        final_trees_signatures[signa] = True
 
 
 def do_nothing(x):
@@ -1297,11 +1295,11 @@ def main():
         global global_steps
 
         final_trees = []
-        final_trees_signatures = []
-        all_signatures = set()
+        final_trees_signatures = {}
+        all_signatures = {}
         global_steps = 0
 
-        test_opti_2(copy.deepcopy(l_stats), astral_tree_bis, 0, maxp, [node_0], [])
+        test_opti_2(copy.deepcopy(l_stats), astral_tree_bis, 0, maxp, [node_0], {})
 
         print(global_steps, time.time() - start)
 
