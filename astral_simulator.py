@@ -366,10 +366,14 @@ def node_8_2_3_1_7_2_9(stats: Stats):
     stats.haste_eight_percent += 1
     return stats
 
+special_cost[node_8_2_3_1_7_2_9] = 2
+
 
 def node_8_2_3_1_7_2_10(stats: Stats):
     stats.haste_eight_percent += 1
     return stats
+
+special_cost[node_8_2_3_1_7_2_10] = 3
 
 
 def node_8_2_3_2_0(stats: Stats):
@@ -454,15 +458,21 @@ def node_8_2_3_2_2_1_0_2_10(stats: Stats):
     stats.perception_one_percent += 1
     return stats
 
+special_cost[node_8_2_3_2_2_1_0_2_10] = 2
+
 
 def node_8_2_3_2_2_1_0_2_11(stats: Stats):
     stats.perception_one_percent += 1
     return stats
 
+special_cost[node_8_2_3_2_2_1_0_2_11] = 2
+
 
 def node_8_2_3_2_2_1_0_2_12(stats: Stats):
     stats.perception_one_percent += 1
     return stats
+
+special_cost[node_8_2_3_2_2_1_0_2_12] = 3
 
 
 def node_8_2_3_2_2_2_0(stats: Stats):
@@ -522,6 +532,8 @@ def node_8_2_3_2_2_2_4_1_5(stats: Stats):
     stats.critical_hit_damage_percent += 1
     return stats
 
+special_cost[node_8_2_3_2_2_2_4_1_5] = 2
+
 
 def node_8_2_3_2_2_2_4_2_0(stats: Stats):
     stats.haste += 13
@@ -575,10 +587,14 @@ def node_8_2_3_2_2_2_4_2_9(stats: Stats):
     stats.critical_damage_three_percent += 1
     return stats
 
+special_cost[node_8_2_3_2_2_2_4_2_9] = 2
+
 
 def node_8_2_3_2_2_2_4_2_10(stats: Stats):
     stats.critical_damage_three_percent += 1
     return stats
+
+special_cost[node_8_2_3_2_2_2_4_2_10] = 3
 
 
 final_trees = []
